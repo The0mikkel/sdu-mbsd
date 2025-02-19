@@ -55,7 +55,7 @@ $m = $stateMachine
 	->build();
 ```
 
-*Litteral map ([from `CDPlayerLitteralMapTest.php`](./tests/CDPlayerLitteralMapTest.php))::*
+*Litteral map ([from `CDPlayerLitteralMapTest.php`](./tests/CDPlayerLitteralMapTest.php)):*
 ```php
 $stateMachine = new StateMachine();
 $NUMBER_TRACKS = 10;
