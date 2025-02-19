@@ -6,7 +6,7 @@ use TheMikkel\Assignment1\Metamodel\Machine;
 use TheMikkel\Assignment1\Metamodel\State;
 use TheMikkel\Assignment1\Metamodel\Transition;
 use TheMikkel\Assignment1\Types\Condition;
-use TheMikkel\Assignment1\Types\TransitionOperation;
+use TheMikkel\Assignment1\Types\Operation;
 
 
 class MachineInterpreter
@@ -89,7 +89,7 @@ class MachineInterpreter
 	private function processOperation(Transition $transition): void
 	{
 		$operation = $transition->getOperation();
-		if ($operation == null || $operation == TransitionOperation::NONE) {
+		if ($operation == null || $operation == Operation::NONE) {
 			return;
 		}
 
@@ -102,20 +102,20 @@ class MachineInterpreter
 		$operationValue = $transition->getOperationValue();
 
 		switch ($operation) {
-			case TransitionOperation::NONE:
+			case Operation::NONE:
 			case null:
 			default:
 				break;
 
-			case TransitionOperation::SET:
+			case Operation::SET:
 				$this->machine->setInteger($variable, $operationValue);
 				break;
 
-			case TransitionOperation::DECREMENT:
+			case Operation::DECREMENT:
 				$this->machine->setInteger($variable, $value - 1);
 				break;
 
-			case TransitionOperation::INCREMENT:
+			case Operation::INCREMENT:
 				$this->machine->setInteger($variable, $value + 1);
 				break;
 		}

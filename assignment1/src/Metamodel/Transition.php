@@ -3,7 +3,7 @@
 namespace TheMikkel\Assignment1\Metamodel;
 
 use TheMikkel\Assignment1\Types\Condition;
-use TheMikkel\Assignment1\Types\TransitionOperation;
+use TheMikkel\Assignment1\Types\Operation;
 
 class Transition
 {
@@ -27,15 +27,15 @@ class Transition
 	/**
 	 * Operation, stored as a TransitionOperation.
 	 * 
-	 * @var TransitionOperation|null $operation
+	 * @var Operation|null $operation
 	 */
-	private TransitionOperation|null $operation = null;
+	private ?Operation $operation = null;
 	/**
 	 * Operation variable name.
 	 * 
 	 * @var string|null
 	 */
-	private string|null $operationVariableName = null;
+	private ?string $operationVariable = null;
 
 	/**
 	 * Operation set value
@@ -49,13 +49,13 @@ class Transition
 	 * 
 	 * @var Condition|null $condition
 	 */
-	private Condition|null $condition = null;
+	private ?Condition $condition = null;
 	/**
 	 * Condition variable name.
 	 * 
 	 * @var string|null
 	 */
-	private string|null $conditionVariableName = null;
+	private ?string $conditionVariable = null;
 	/**
 	 * Condition compared value.
 	 * 
@@ -67,7 +67,7 @@ class Transition
 	public function __construct(
 		string $event,
 		State $target = null,
-		TransitionOperation|string|null $operation = null,
+		Operation|string|null $operation = null,
 		string|null $operationVariable = null,
 		int $operationValue = 0,
 		Condition|string|null $condition = null,
@@ -78,17 +78,17 @@ class Transition
 		$this->target = $target;
 
 		if (is_string($operation)) { # Convert string to TransitionOperation
-			$operation = TransitionOperation::from($operation) ?? null;
+			$operation = Operation::from($operation) ?? null;
 		}
 		$this->operation = $operation;
-		$this->operationVariableName = $operationVariable;
+		$this->operationVariable = $operationVariable;
 		$this->operationVariableValue = $operationValue;
 
 		if (is_string($condition)) {
 			$condition = Condition::from($condition) ?? null;
 		}
 		$this->condition = $condition;
-		$this->conditionVariableName = $conditionVariable;
+		$this->conditionVariable = $conditionVariable;
 		$this->conditionComparedValue = $conditionComparedValue;
 	}
 
@@ -107,7 +107,7 @@ class Transition
 		$this->target = $target;
 	}
 
-	public function setOperation(?TransitionOperation $operation, ?string $variable = null, ?int $value = null): void
+	public function setOperation(?Operation $operation, ?string $variable = null, ?int $value = null): void
 	{
 		$this->operation = $operation;
 
@@ -121,7 +121,7 @@ class Transition
 
 	public function setOperationVariable(string $variable): void
 	{
-		$this->operationVariableName = $variable;
+		$this->operationVariable = $variable;
 	}
 
 	public function setOperationValue(int $value): void
@@ -129,29 +129,29 @@ class Transition
 		$this->operationVariableValue = $value;
 	}
 
-	public function getOperation(): TransitionOperation
+	public function getOperation(): Operation
 	{
-		return $this->operation ?? TransitionOperation::NONE;
+		return $this->operation ?? Operation::NONE;
 	}
 
 	public function hasSetOperation(): bool
 	{
-		return $this->operation == TransitionOperation::SET;
+		return $this->operation == Operation::SET;
 	}
 
 	public function hasIncrementOperation(): bool
 	{
-		return $this->operation == TransitionOperation::INCREMENT;
+		return $this->operation == Operation::INCREMENT;
 	}
 
 	public function hasDecrementOperation(): bool
 	{
-		return $this->operation == TransitionOperation::DECREMENT;
+		return $this->operation == Operation::DECREMENT;
 	}
 
 	public function getOperationVariableName(): string|null
 	{
-		return $this->operationVariableName;
+		return $this->operationVariable;
 	}
 
 	public function getOperationValue(): int
@@ -176,7 +176,7 @@ class Transition
 
 	public function setConditionalVariable(string $variable): void
 	{
-		$this->conditionVariableName = $variable;
+		$this->conditionVariable = $variable;
 	}
 
 	public function setConditionalComparedValue(string $value): void
@@ -198,7 +198,7 @@ class Transition
 
 	public function getConditionVariableName(): string|null
 	{
-		return $this->conditionVariableName;
+		return $this->conditionVariable;
 	}
 
 	public function getConditionComparedValue(): int

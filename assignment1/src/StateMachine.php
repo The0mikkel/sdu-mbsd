@@ -6,7 +6,8 @@ use TheMikkel\Assignment1\Metamodel\Machine;
 use TheMikkel\Assignment1\Metamodel\State;
 use TheMikkel\Assignment1\Metamodel\Transition;
 use TheMikkel\Assignment1\Types\Condition;
-use TheMikkel\Assignment1\Types\TransitionOperation;
+use TheMikkel\Assignment1\Types\Operation;
+use TheMikkel\Assignment1\Builder\Transition as TransitionBuilder;
 
 class StateMachine
 {
@@ -45,10 +46,44 @@ class StateMachine
 		return $machine;
 	}
 
-	public function state(string $name): StateMachine
+
+	/**
+	 * Add state to state machine
+	 * 
+	 * @param string $name Name of the state
+	 * @param mixed $transitions 
+	 * @param bool $initial
+	 * @return StateMachine
+	 */
+	public function state(string $name, ?array $transitions = null, bool $initial = false): StateMachine
 	{
+		if (array_key_exists($name, $this->states)) {
+			$this->currentState = $this->states[$name];
+		}
+
 		$this->currentState = new State($name);
 		$this->states[$name] = $this->currentState;
+
+		if ($transitions) {
+			foreach ($transitions as $transition) {
+				$generatedTransition = new Transition(
+					event: $transition->getName(),
+					operation: $transition->getOperation(),
+					operationVariable: $transition->getOperationVariable(),
+					operationValue: $transition->getOperationValue(),
+					condition: $transition->getCondition(),
+					conditionVariable: $transition->getConditionVariable(),
+					conditionComparedValue: $transition->getConditionValue(),
+				);
+
+				$this->transitionTargets[] = ["target" => $transition->getTarget(), "transition" => $generatedTransition];
+				$this->currentState->addTransition($generatedTransition);
+			}
+		}
+
+		if ($initial) {
+			$this->initialState = $this->currentState;
+		}
 
 		return $this;
 	}
@@ -90,7 +125,7 @@ class StateMachine
 	{
 		if ($this->currentTransition != null) {
 			$this->currentTransition->setOperation(
-				operation: TransitionOperation::SET,
+				operation: Operation::SET,
 				variable: $string,
 				value: $i
 			);
@@ -105,7 +140,7 @@ class StateMachine
 	{
 		if ($this->currentTransition != null) {
 			$this->currentTransition->setOperation(
-				operation: TransitionOperation::INCREMENT,
+				operation: Operation::INCREMENT,
 				variable: $string
 			);
 		}
@@ -116,7 +151,7 @@ class StateMachine
 	{
 		if ($this->currentTransition != null) {
 			$this->currentTransition->setOperation(
-				operation: TransitionOperation::DECREMENT,
+				operation: Operation::DECREMENT,
 				variable: $string
 			);
 		}
@@ -160,3 +195,4 @@ class StateMachine
 	}
 
 }
+

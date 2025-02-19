@@ -6,7 +6,7 @@ use TheMikkel\Assignment1\StateMachine;
 use TheMikkel\Assignment1\MachineInterpreter;
 use PHPUnit\Framework\TestCase;
 
-class CDPlayer2Test extends TestCase {
+class CDPlayerMethodChainingTest extends TestCase {
 	
 	private MachineInterpreter $interpreter;
 	
