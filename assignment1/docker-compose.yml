@@ -1,0 +1,6 @@
+services:
+  test:
+    build: .
+    volumes:
+      - .:/app
+    command: ["composer install && ./vendor/bin/phpunit tests"]
