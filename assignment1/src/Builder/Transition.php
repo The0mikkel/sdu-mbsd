@@ -19,13 +19,13 @@ class Transition
 	/**
 	 * Create transition, with dynamicly interpreted arguments
 	 * 
-	 * @param string $when When this transition is done. Also seen as the event name that triggers the transition
-	 * @param string|null $to What state it transitions to. Must be the name of the state
+	 * @param string $when When this transition is done. Also seen as the event name that triggers the transition.
+	 * @param string $to What state it transitions to. Must be the name of the state.
 	 * @param Set|Increment|Decrement|IfEquals|IfGreaterThan|IfLessThan $args List of arguments for the operation and condition for the transition.
 	 */
 	public function __construct(
 		string $when,
-		?string $to,
+		string $to,
 		Set|Increment|Decrement|IfEquals|IfGreaterThan|IfLessThan ...$args
 	) {
 		// Set main attributes
