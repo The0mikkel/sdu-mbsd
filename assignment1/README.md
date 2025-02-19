@@ -123,3 +123,5 @@ A pull request is available at [github.com/The0mikkel/sdu-mbsd/pull/1](https://g
 Included in the code, is a `docker-compose.yml` file, which can be used to run the tests in a docker container.
 
 *Please note, that the code utalize multiple PHP features, which is not available before PHP 8.2.*
+
+*This document is available at [github.com/The0mikkel/sdu-mbsd/assignment1/README.md](https://github.com/The0mikkel/sdu-mbsd/tree/main/assignment1/README.md).*
