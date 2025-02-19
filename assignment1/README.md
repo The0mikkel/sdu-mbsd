@@ -11,16 +11,16 @@ This assignment uses the advanced version, with the programming language being P
 ## Solution
 
 The solution builds on top of the provided source code, provided by the simple version of the assignment.  
-This has then been translated into PHP (mostly a one-to-one translation). This gives a baseline with three model classes: `Machine`, `State`, and `Transition`.  
-In order to run the state machine, a `MachineInterpreter` class is created. This handles the interpretation of the state machine, and the transitions between states. It therefore handles any conditions and operations that are defined.  
-In order to create the fluid API a `StateMachine` class is created. This handles the fluid API parsing to a state machine.
+This has then been translated into PHP (mostly a one-to-one translation). This gives a baseline with three model classes: [`Machine`](./src/Metamodel/Machine.php), [`State`](./src/Metamodel/State.php), and [`Transition`](./src/Metamodel/Transition.php).  
+In order to run the state machine, a [`MachineInterpreter`](./src/MachineInterpreter.php) class is created. This handles the interpretation of the state machine, and the transitions between states. It therefore handles any conditions and operations that are defined.  
+In order to create the fluid API a [`StateMachine`](./src/StateMachine.php) class is created. This handles the fluid API parsing to a state machine.
 
-Tests for the code, which primarily builds on top of the provided tests, are located in the `tests` directory. These tests are run using PHPUnit.
+Tests for the code, which primarily builds on top of the provided tests, are located in the [`tests`](./tests/) directory. These tests are run using PHPUnit.
 
 
 Two variation of the fluid API is available.  
 First variation uses method chaining to create the state machine.
-Second variation uses litteral collection, or more specifically litteral map, as PHP supports this. However this implementation is a bit more complex and uses builder pattern with specific classes, which are located in `src/Builder` directory.  
+Second variation uses litteral collection, or more specifically litteral map, as PHP supports this. However this implementation is a bit more complex and uses builder pattern with specific classes, which are located in [`src/Builder`](./src/Builder/) directory.  
 
 Both versions uses underlying the same process of building the state machine.  
 The building processes utilize command query access to data on the underlying model. Here, each element is added to the model, when it is specified in the fluid API.  
@@ -111,7 +111,7 @@ $m = $stateMachine
 
 Litteral collection is build to support both litteral list and map. Litteral list is shown in the last state ("PAUSED") in the example above.   
 The IDE, with the correct language support, would showcase keys for each element.  
-The implementation in the litteral list example, utalizie the class name, to determine which field is being filled out. This is implemented in `src/Builder/Transition.php`.
+The implementation in the litteral list example, utalizie the class name, to determine which field is being filled out. This is implemented in [`src/Builder/Transition.php`](./src/Builder/Transition.php).
 
 It is important to note, that the litteral collection example looks to fill more, but that is due to more new lines, compared to the method chaining example.
 
