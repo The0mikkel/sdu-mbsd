@@ -60,6 +60,10 @@ var y = 87
 
 ## Source code
 
-The source code for assignment 2 is available at [github.com/The0mikkel/sdu-mbsd](https://github.com/The0mikkel/sdu-mbsd).
+The source code for assignment 2 is available at [github.com/The0mikkel/sdu-mbsd](https://github.com/The0mikkel/sdu-mbsd).  
+A pull request is available at [github.com/The0mikkel/sdu-mbsd/pull/2](https://github.com/The0mikkel/sdu-mbsd/pull/2), where changes from the provided code can be seen.
+
+Xtext file is available at [`Math.xtext`](https://github.com/The0mikkel/sdu-mbsd/blob/main/assignment2/dk.sdu.mmmi.mdsd.math/src/dk/sdu/mmmi/mdsd/Math.xtext).  
+Generator file is available at [`generator/MathGenerator.xtend`](https://github.com/The0mikkel/sdu-mbsd/blob/main/assignment2/dk.sdu.mmmi.mdsd.math/src/dk/sdu/mmmi/mdsd/generator/MathGenerator.xtend).
 
 *This document is available at [github.com/The0mikkel/sdu-mbsd/assignment2/README.md](https://github.com/The0mikkel/sdu-mbsd/tree/main/assignment2/README.md).*
