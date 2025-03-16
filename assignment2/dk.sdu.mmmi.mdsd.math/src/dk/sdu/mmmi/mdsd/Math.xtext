@@ -2,30 +2,35 @@ grammar dk.sdu.mmmi.mdsd.Math with org.eclipse.xtext.common.Terminals
 
 generate math "http://www.sdu.dk/mmmi/mdsd/Math"
 
+Maths:
+	expressions+=(MathExp)+
+;
+
 MathExp:
-	'var' name=ID '=' exp=Exp
+	'var' variable=Variable exp=Exp
+;
+
+Variable:
+	name=ID '='
 ;
 
 Exp:
-	left=Number (operator=ExpOp right=Number)?
+	expression=AddOrSub
 ;
 
-ExpOp:
-	{Plus} '+' | {Minus} '-'	 | {Mult} '*' | {Div} '/'	
+SubMathExp: 
+	'let' variable=Variable value=Exp 'in' exp=Exp 'end'
 ;
 
-Primary:
-	Number | Parenthesis | VariableUse
-;
-
-Parenthesis:
-	'(' exp=Exp ')'
-;
+AddOrSub returns Expression: Term ( ({Plus.left=current} '+' | {Minus.left=current} '-') right=Term )* ;
+Term returns Expression: SubMath (({Multi.left = current} '*' | {Div.left=current} '/') right=SubMath)* ;
+SubMath returns Expression: Factor ({SubMath.left = current} sub=SubMathExp)* ;
+Factor returns Expression: Number | '(' Exp ')' | VariableUse | SubMathExp;
 
 Number:
 	value=INT
 ;
 
 VariableUse:
-	ref = [MathExp]
+	ref = [Variable]
 ;
