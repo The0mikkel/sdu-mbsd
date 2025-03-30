@@ -13,17 +13,16 @@
 
 ## Solution
 
-A math interpreter has been implemented, using xtext and code generation / calculation using xtend.
+A math interpreter has been implemented, using xtext and code generation / calculation using xtend, as well as validation and scoping.
 
-The solution passes `MathExampleTest` and `MathParsingTest` tests.  
-The solution does not pass `MathScopeTest` and `MathValidatorTest` tests, as these elements have not been required by the assignment description, nor yet been tought in the course, at the time of this assignment.	
+The solution passes all provided tests; `MathExampleTest`, `MathParsingTest`, `MathScopeTest` and `MathValidatorTest` tests.  
 
 The solution handles general math, as covered by the tests. This includes addition, subtraction, multiplication, and division.  
 It can also handle sub-expression, with variables being used only within the sub-expression. this is done by using the `let` keyword, a single variable declaration, `in` keyword, and then the expression.  
 Example: `let i = 2 in a * i end`
 
 The system can handle that the variables are not defined in the order they are used in other variables.  
-However, you *can* trigger an invalid calculation, as there is not scoping of variables. When a variable is used inside a sub-expression, it can be used in the global scope, and will cause an error if not defined. The error is implemented as an error message box that pops up, notifying the user of the error.
+If variables, that are not defined, are used, the system will provide an error. Variables defined inside sub-expressions are only available in that sub-expression. If an existing variable exists, it will be replaced within the sub-expression.
 
 Hovering box is not implemented in this solution.
 

@@ -155,7 +155,8 @@ class MathGenerator extends AbstractGenerator {
 		var value = sub.value.computeExp
 		variables.put(variable, value)
 		
-		var result = sub.exp.computeExp
+		var expression = sub.exp.get(0)
+		var result = expression.computeExp
 		variables.remove(variable)
 		
 		

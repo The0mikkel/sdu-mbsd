@@ -19,7 +19,7 @@ Exp:
 ;
 
 SubMathExp: 
-	'let' variable=Variable value=Exp 'in' exp=Exp 'end'
+	'let' variable=Variable value=Exp 'in' exp+=Exp 'end'
 ;
 
 AddOrSub returns Expression: Term ( ({Plus.left=current} '+' | {Minus.left=current} '-') right=Term )* ;

@@ -3,6 +3,15 @@
  */
 package dk.sdu.mmmi.mdsd.scoping
 
+import org.eclipse.emf.ecore.EObject
+import org.eclipse.emf.ecore.EReference
+import org.eclipse.xtext.scoping.IScope
+import dk.sdu.mmmi.mdsd.math.SubMathExp
+import org.eclipse.xtext.scoping.Scopes
+import dk.sdu.mmmi.mdsd.math.Maths
+import dk.sdu.mmmi.mdsd.math.MathPackage
+import java.util.Arrays
+import dk.sdu.mmmi.mdsd.math.MathExp
 
 /**
  * This class contains custom scoping description.
@@ -11,5 +20,32 @@ package dk.sdu.mmmi.mdsd.scoping
  * on how and when to use it.
  */
 class MathScopeProvider extends AbstractMathScopeProvider {
+	 override getScope(EObject context, EReference reference) {
+	  if (reference == MathPackage.Literals.VARIABLE_USE__REF) {
+	    return scopeForSymbolRef(context)
+	  }
+	  return super.getScope(context, reference)
+	 }
+	 
+	 def protected IScope scopeForSymbolRef(EObject context) {
+	  val container = context.eContainer
+	  
+	  return switch (container) {
+	    Maths: {
+	    	var list = container.expressions.map[it.variable]
 
+			if (context instanceof MathExp) {
+				val expression = context as MathExp
+				return Scopes.scopeFor(list.filter[it.name !== expression.variable.name])
+			}
+	    	
+	    	return Scopes.scopeFor(list)
+	    }
+	    SubMathExp: Scopes.scopeFor(
+	        Arrays.asList(container.variable),
+	        scopeForSymbolRef(container) // outer scope
+	      )
+	    default: scopeForSymbolRef(container)
+	  }
+	 }
 }
