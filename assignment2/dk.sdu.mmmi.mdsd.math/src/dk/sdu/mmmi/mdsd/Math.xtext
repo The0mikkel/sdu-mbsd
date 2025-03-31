@@ -32,5 +32,9 @@ Number:
 ;
 
 VariableUse:
-	ref = [Variable]
+	ref = [Variable] // To handle two different types, "Def" could have been used instead
+;
+
+Def:
+	MathExp | SubMathExp
 ;
