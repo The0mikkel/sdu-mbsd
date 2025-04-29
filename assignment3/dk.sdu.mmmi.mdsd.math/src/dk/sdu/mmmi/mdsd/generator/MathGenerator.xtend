@@ -23,6 +23,10 @@ import dk.sdu.mmmi.mdsd.math.SubMathExp
 import java.util.List
 import java.util.LinkedList
 import dk.sdu.mmmi.mdsd.math.SubMath
+import dk.sdu.mmmi.mdsd.math.ExternalCall
+import java.util.stream.IntStream
+import dk.sdu.mmmi.mdsd.math.External
+import dk.sdu.mmmi.mdsd.math.ExternalAttribute
 
 /**
  * Generates code from your model files on save.
@@ -31,7 +35,7 @@ import dk.sdu.mmmi.mdsd.math.SubMath
  */
 class MathGenerator extends AbstractGenerator {
 
-	static Map<String, Integer> variables = new HashMap();
+	static Map<String, String> variables = new HashMap();
 	static Map<String, List<MathExp>> deferredCalculation = new HashMap();
 	
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
@@ -42,7 +46,7 @@ class MathGenerator extends AbstractGenerator {
 		// You can replace with hovering, see Bettini Chapter 8
 		// variables.displayPanel
 		
-		result.generateFile(fsa)
+		result.generateFile(fsa, maths)
 	}
 	
 	def static compute(Maths math) {
@@ -87,9 +91,9 @@ class MathGenerator extends AbstractGenerator {
 		JOptionPane.showMessageDialog(null, message, "Missing variables", JOptionPane.ERROR_MESSAGE)
 	}
 	
-	def static compute(MathExp math) {
+	def static Map<String, String> compute(MathExp math) {
 		var variableName = math.variable.name
-		var result = 0;
+		var result = "";
 		
 		try {			
 			result = math.exp.computeExp
@@ -112,40 +116,40 @@ class MathGenerator extends AbstractGenerator {
 		return variables
 	}
 	
-	dispatch def static int computeExp(Exp exp) {
+	dispatch def static String computeExp(Exp exp) {
 		val expression = exp.expression
 		
 		return expression.computeExp
 	}
 	
-	dispatch def static int computeExp(dk.sdu.mmmi.mdsd.math.Number number) {
-		return number.value
+	dispatch def static String computeExp(dk.sdu.mmmi.mdsd.math.Number number) {
+		return number.value.toString()
 	}
 	
-	dispatch def static int computeExp(Plus plus) {
-		return plus.left.computeExp + plus.right.computeExp
+	dispatch def static String computeExp(Plus plus) {
+		return '''«plus.left.computeExp» + «plus.right.computeExp»'''
 	}
 	
-	dispatch def static int computeExp(Minus minus) {
-		return minus.left.computeExp - minus.right.computeExp
+	dispatch def static String computeExp(Minus minus) {
+		return '''«minus.left.computeExp» - «minus.right.computeExp»'''
 	}
 	
-	dispatch def static int computeExp(Multi multi) {
-		return multi.left.computeExp * multi.right.computeExp
+	dispatch def static String computeExp(Multi multi) {
+		return '''«multi.left.computeExp» * «multi.right.computeExp»'''
 	}
 	
-	dispatch def static int computeExp(Div div) {
-		return div.left.computeExp / div.right.computeExp
+	dispatch def static String computeExp(Div div) {
+		return '''«div.left.computeExp» / «div.right.computeExp»'''
 	}
 	
-	dispatch def static int computeExp(SubMath sub) {
+	dispatch def static String computeExp(SubMath sub) {
 		return sub.sub.computeExp
 	}
 	
-	dispatch def static int computeExp(SubMathExp sub) {
+	dispatch def static String computeExp(SubMathExp sub) {
 		var variable = sub.variable.name
 		
-		var existing = 0
+		var existing = ""
 		var exists = false
 		if (variables.containsKey(variable)) {
 			exists = true
@@ -167,7 +171,7 @@ class MathGenerator extends AbstractGenerator {
 		return result
 	}
 	
-	dispatch def static int computeExp(VariableUse variable) {
+	dispatch def static String computeExp(VariableUse variable) {
 		var variableName = variable.ref.getName
 		if (!variables.containsKey(variableName)) {
 			throw new VariableNotFound(variableName)
@@ -176,10 +180,47 @@ class MathGenerator extends AbstractGenerator {
 		return variables.get(variableName)
 	}
 	
-	dispatch def static int computeExp(EObject object) {
+	dispatch def static String computeExp(ExternalCall call) {
+		return '''this.external.«call.method.name»(«call.attributes.externalCallAttributesToList.map[it.computeExp].join(", ")»)'''
+	}
+	
+	def static LinkedList<EObject> externalCallAttributesToList(ExternalAttribute attribute) {
+		var list = new LinkedList<EObject>();
+		
+		if (attribute === null) {
+			return list;
+		}
+		
+		if (attribute instanceof Exp) {
+			list.add(attribute);
+			return list;
+		}
+		
+		if (attribute.left instanceof Exp) {
+			list.add(attribute.left)
+		} else if (attribute.left !== null) {
+			var left = attribute.left
+			if (left instanceof ExternalAttribute) {				
+				var data = externalCallAttributesToList(left)
+				list.addAll(data)
+			}
+		}
+		
+		if (attribute.right !== null) {
+			list.add(attribute.right)
+		}
+
+		return list;
+	}
+	
+	def static String getAttributeList(Exp attribute) {
+		return attribute.computeExp
+	}
+	
+	dispatch def static String computeExp(EObject object) {
 		System.out.println("Found unknown object")
 		System.out.println(object)
-		return 1;
+		return "";
 	}
 	
 	def void displayPanel(Map<String, Integer> result) {
@@ -191,12 +232,40 @@ class MathGenerator extends AbstractGenerator {
 		JOptionPane.showMessageDialog(null, resultString ,"Math Language", JOptionPane.INFORMATION_MESSAGE)
 	}
 	
-	def void generateFile(Map<String, Integer> result, IFileSystemAccess2 fsa) {
-		var resultString = ""
-		for (entry : result.entrySet()) {
-         	resultString += "var " + entry.getKey() + " = " + entry.getValue() + "\n"
-        }
-		
-		fsa.generateFile('output.txt', resultString)
+	def generateFile(Map<String, String> result, IFileSystemAccess2 fsa, Maths maths) {
+		fsa.generateFile('output.java', '''
+package math_expression;
+public class «maths.program.name» {
+	«FOR entry : result.entrySet()»
+	public int «entry.getKey()»;
+	«ENDFOR»
+	
+	private External external;
+	
+	public «maths.program.name»(External external) {
+	    this.external = external;
+	}
+	
+	public void compute() {
+		«FOR entry : result.entrySet()»
+		«entry.getKey()» = «entry.getValue()»;
+		«ENDFOR»
+	}
+	
+	interface External {
+		«FOR externalMethod : maths.externals»
+		public int «externalMethod.name»(«getParameterList(externalMethod)»);
+		«ENDFOR»
+	}
+}
+		''')
+	}
+	
+	def String getParameterList(External external) {
+		var parameters = new LinkedList<String>();
+		for (var i = 0 ; i < external.parameters.length ; i++) {
+			parameters.add("int n"+i)
+		}
+		return parameters.join(", ")
 	}
 }
