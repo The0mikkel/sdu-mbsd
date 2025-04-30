@@ -7,6 +7,12 @@ import org.eclipse.xtext.validation.Check
 import dk.sdu.mmmi.mdsd.math.Maths
 import dk.sdu.mmmi.mdsd.math.MathExp
 import dk.sdu.mmmi.mdsd.math.MathPackage
+import dk.sdu.mmmi.mdsd.math.ExternalCall
+import org.eclipse.emf.ecore.EObject
+import java.util.LinkedList
+import dk.sdu.mmmi.mdsd.math.ExternalAttribute
+import dk.sdu.mmmi.mdsd.math.Exp
+import org.eclipse.xtext.EcoreUtil2
 
 /**
  * This class contains custom validation rules. 
@@ -27,10 +33,53 @@ class MathValidator extends AbstractMathValidator {
 				if (!expression.equals(math)) {
 					var expName = expression.variable.name
 					if (name.equals(expName)) {
-						warning("Variable is already declared", MathPackage.eINSTANCE.mathExp_Variable)
+						warning("Variable is already declared", MathPackage.eINSTANCE.variable_Name)
 					}
 				}
 			}
 		}
+	}
+	
+	@Check
+	def checkAttributeCountExternal(ExternalCall call) {
+		var maths = EcoreUtil2.getContainerOfType(call, Maths);
+		
+		var filteret = maths.externals.filter[it.equals(call.method)];
+		if (filteret.length !== 1) {
+			return;
+		}
+		
+		var external = filteret.get(0);
+		var parameters = external.parameters
+		var attributes = externalCallAttributesToList(call.attributes)
+			
+		if (attributes.length !== parameters.length) {
+			warning("Incorrect number of attributes. Method contains " + parameters.length + " parameters. " + attributes.length + " given.", MathPackage.eINSTANCE.externalCall_Attributes)
+		}
+	}
+	
+	def LinkedList<EObject> externalCallAttributesToList(ExternalAttribute attribute) {
+		var list = new LinkedList<EObject>();
+		
+		if (attribute instanceof Exp) {
+			list.add(attribute);
+			return list;
+		}
+		
+		if (attribute.left instanceof Exp) {
+			list.add(attribute.left)
+		} else if (attribute.left !== null) {
+			var left = attribute.left
+			if (left instanceof ExternalAttribute) {				
+				var data = externalCallAttributesToList(left)
+				list.addAll(data)
+			}
+		}
+		
+		if (attribute.right !== null) {
+			list.add(attribute.right)
+		}
+
+		return list;
 	}
 }

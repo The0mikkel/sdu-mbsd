@@ -23,6 +23,10 @@ import dk.sdu.mmmi.mdsd.math.SubMathExp
 import java.util.List
 import java.util.LinkedList
 import dk.sdu.mmmi.mdsd.math.SubMath
+import dk.sdu.mmmi.mdsd.math.ExternalCall
+import dk.sdu.mmmi.mdsd.math.External
+import dk.sdu.mmmi.mdsd.math.ExternalAttribute
+import java.util.LinkedHashMap
 
 /**
  * Generates code from your model files on save.
@@ -30,19 +34,14 @@ import dk.sdu.mmmi.mdsd.math.SubMath
  * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#code-generation
  */
 class MathGenerator extends AbstractGenerator {
-
-	static Map<String, Integer> variables = new HashMap();
+	static Map<String, String> variables = new LinkedHashMap();
+	static Map<String, String> submathVariables = new LinkedHashMap();
 	static Map<String, List<MathExp>> deferredCalculation = new HashMap();
 	
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
 		val maths = resource.allContents.filter(Maths).next
-		
 		var result = maths.compute
-		
-		// You can replace with hovering, see Bettini Chapter 8
-		// variables.displayPanel
-		
-		result.generateFile(fsa)
+		result.generateFile(fsa, maths)
 	}
 	
 	def static compute(Maths math) {
@@ -54,8 +53,10 @@ class MathGenerator extends AbstractGenerator {
 		// Announce variables missing
 		deferredError()
 		deferredCalculation.clear()
+		var resultVariables = new LinkedHashMap(variables)
+		variables.clear()
 		
-		return variables
+		return resultVariables
 	}
 	
 	def static runDeferred(MathExp math) {
@@ -87,9 +88,9 @@ class MathGenerator extends AbstractGenerator {
 		JOptionPane.showMessageDialog(null, message, "Missing variables", JOptionPane.ERROR_MESSAGE)
 	}
 	
-	def static compute(MathExp math) {
+	def static Map<String, String> compute(MathExp math) {
 		var variableName = math.variable.name
-		var result = 0;
+		var result = "";
 		
 		try {			
 			result = math.exp.computeExp
@@ -112,54 +113,64 @@ class MathGenerator extends AbstractGenerator {
 		return variables
 	}
 	
-	dispatch def static int computeExp(Exp exp) {
+	dispatch def static String computeExp(Exp exp) {
 		val expression = exp.expression
 		
 		return expression.computeExp
 	}
 	
-	dispatch def static int computeExp(dk.sdu.mmmi.mdsd.math.Number number) {
-		return number.value
+	dispatch def static String computeExp(dk.sdu.mmmi.mdsd.math.Number number) {
+		return number.value.toString()
 	}
 	
-	dispatch def static int computeExp(Plus plus) {
-		return plus.left.computeExp + plus.right.computeExp
+	dispatch def static String computeExp(Plus plus) {
+		return '''(«plus.left.computeExp» + «plus.right.computeExp»)'''
 	}
 	
-	dispatch def static int computeExp(Minus minus) {
-		return minus.left.computeExp - minus.right.computeExp
+	dispatch def static String computeExp(Minus minus) {
+		return '''(«minus.left.computeExp» - «minus.right.computeExp»)'''
 	}
 	
-	dispatch def static int computeExp(Multi multi) {
-		return multi.left.computeExp * multi.right.computeExp
+	dispatch def static String computeExp(Multi multi) {
+		return '''(«multi.left.computeExp» * «multi.right.computeExp»)'''
 	}
 	
-	dispatch def static int computeExp(Div div) {
-		return div.left.computeExp / div.right.computeExp
+	dispatch def static String computeExp(Div div) {
+		return '''(«div.left.computeExp» / «div.right.computeExp»)'''
 	}
 	
-	dispatch def static int computeExp(SubMath sub) {
+	dispatch def static String computeExp(SubMath sub) {
 		return sub.sub.computeExp
 	}
 	
-	dispatch def static int computeExp(SubMathExp sub) {
+	dispatch def static String computeExp(SubMathExp sub) {
 		var variable = sub.variable.name
 		
-		var existing = 0
+		var existing = ""
 		var exists = false
 		if (variables.containsKey(variable)) {
 			exists = true
 			existing = variables.get(variable);
 		}
+		var existingSubmathVariable = ""
+		var existSubmathVariable = false
+		if (submathVariables.containsKey(variable)) {
+			existSubmathVariable = true
+			existingSubmathVariable = submathVariables.get(variable)
+		}
 		
 		var value = sub.value.computeExp
 		variables.put(variable, value)
+		submathVariables.put(variable, value)
 		
 		var expression = sub.exp.get(0)
 		var result = expression.computeExp
 		variables.remove(variable)
+		submathVariables.remove(variable)
 		
-		
+		if (existSubmathVariable) {
+			submathVariables.put(variable, existingSubmathVariable)
+		}
 		if (exists) {
 			variables.put(variable, existing)
 		}
@@ -167,19 +178,61 @@ class MathGenerator extends AbstractGenerator {
 		return result
 	}
 	
-	dispatch def static int computeExp(VariableUse variable) {
-		var variableName = variable.ref.getName
-		if (!variables.containsKey(variableName)) {
-			throw new VariableNotFound(variableName)
+	dispatch def static String computeExp(VariableUse variable) {
+		var name = variable.ref.name;
+		
+		if (!variables.containsKey(name)) {
+			throw new VariableNotFound(name);
 		}
 		
-		return variables.get(variableName)
+		if (submathVariables.containsKey(name)) {
+			return submathVariables.get(name)
+		}
+		
+		return name;
 	}
 	
-	dispatch def static int computeExp(EObject object) {
+	dispatch def static String computeExp(ExternalCall call) {
+		return '''this.external.«call.method.name»(«call.attributes.externalCallAttributesToList.map[it.computeExp].join(", ")»)'''
+	}
+	
+	def static LinkedList<EObject> externalCallAttributesToList(ExternalAttribute attribute) {
+		var list = new LinkedList<EObject>();
+		
+		if (attribute === null) {
+			return list;
+		}
+		
+		if (attribute instanceof Exp) {
+			list.add(attribute);
+			return list;
+		}
+		
+		if (attribute.left instanceof Exp) {
+			list.add(attribute.left)
+		} else if (attribute.left !== null) {
+			var left = attribute.left
+			if (left instanceof ExternalAttribute) {				
+				var data = externalCallAttributesToList(left)
+				list.addAll(data)
+			}
+		}
+		
+		if (attribute.right !== null) {
+			list.add(attribute.right)
+		}
+
+		return list;
+	}
+	
+	def static String getAttributeList(Exp attribute) {
+		return attribute.computeExp
+	}
+	
+	dispatch def static String computeExp(EObject object) {
 		System.out.println("Found unknown object")
 		System.out.println(object)
-		return 1;
+		return "";
 	}
 	
 	def void displayPanel(Map<String, Integer> result) {
@@ -191,12 +244,45 @@ class MathGenerator extends AbstractGenerator {
 		JOptionPane.showMessageDialog(null, resultString ,"Math Language", JOptionPane.INFORMATION_MESSAGE)
 	}
 	
-	def void generateFile(Map<String, Integer> result, IFileSystemAccess2 fsa) {
-		var resultString = ""
-		for (entry : result.entrySet()) {
-         	resultString += "var " + entry.getKey() + " = " + entry.getValue() + "\n"
-        }
-		
-		fsa.generateFile('output.txt', resultString)
+	def generateFile(Map<String, String> result, IFileSystemAccess2 fsa, Maths maths) {
+		fsa.generateFile('''math_expression/«maths.program.name».java''', '''
+package math_expression;
+public class «maths.program.name» {
+	«FOR variable : result.entrySet()»
+	public int «variable.key»;
+	«ENDFOR»
+	
+	«IF maths.externals.length > 0»
+	private External external;
+	
+	public «maths.program.name»(External external) {
+	    this.external = external;
+	}
+	«ELSE»
+	public «maths.program.name»() {}
+	«ENDIF»
+	
+	public void compute() {
+		«FOR variable : result.entrySet()»
+		«variable.key» = «variable.value»;
+		«ENDFOR»
+	}
+	«IF maths.externals.length > 0»
+	public interface External {
+		«FOR externalMethod : maths.externals»
+		public int «externalMethod.name»(«getParameterList(externalMethod)»);
+		«ENDFOR»
+	}
+	«ENDIF»
+}
+		''')
+	}
+	
+	def String getParameterList(External external) {
+		var parameters = new LinkedList<String>();
+		for (var i = 0 ; i < external.parameters.length ; i++) {
+			parameters.add("int n"+i)
+		}
+		return parameters.join(", ")
 	}
 }

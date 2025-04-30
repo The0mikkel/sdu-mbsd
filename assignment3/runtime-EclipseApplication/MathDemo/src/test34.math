@@ -12,7 +12,7 @@ var sideC =
 		let powB = pow(sideB, 2) in
 			sqrt(powA + powB)
 		end
-	end
+	end 
 
 var perimeterTriangle = sideA + sideB + sideC
 
