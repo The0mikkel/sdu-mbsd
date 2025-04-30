@@ -35,6 +35,7 @@ import java.util.LinkedHashMap
  */
 class MathGenerator extends AbstractGenerator {
 	static Map<String, String> variables = new LinkedHashMap();
+	static Map<String, String> submathVariables = new LinkedHashMap();
 	static Map<String, List<MathExp>> deferredCalculation = new HashMap();
 	
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
@@ -151,15 +152,25 @@ class MathGenerator extends AbstractGenerator {
 			exists = true
 			existing = variables.get(variable);
 		}
+		var existingSubmathVariable = ""
+		var existSubmathVariable = false
+		if (submathVariables.containsKey(variable)) {
+			existSubmathVariable = true
+			existingSubmathVariable = submathVariables.get(variable)
+		}
 		
 		var value = sub.value.computeExp
 		variables.put(variable, value)
+		submathVariables.put(variable, value)
 		
 		var expression = sub.exp.get(0)
 		var result = expression.computeExp
 		variables.remove(variable)
+		submathVariables.remove(variable)
 		
-		
+		if (existSubmathVariable) {
+			submathVariables.put(variable, existingSubmathVariable)
+		}
 		if (exists) {
 			variables.put(variable, existing)
 		}
@@ -168,11 +179,17 @@ class MathGenerator extends AbstractGenerator {
 	}
 	
 	dispatch def static String computeExp(VariableUse variable) {
-		if (!variables.containsKey(variable.ref.name)) {
-			throw new VariableNotFound(variable.ref.name);
+		var name = variable.ref.name;
+		
+		if (!variables.containsKey(name)) {
+			throw new VariableNotFound(name);
 		}
 		
-		return variables.get(variable.ref.name)
+		if (submathVariables.containsKey(name)) {
+			return submathVariables.get(name)
+		}
+		
+		return name;
 	}
 	
 	dispatch def static String computeExp(ExternalCall call) {
