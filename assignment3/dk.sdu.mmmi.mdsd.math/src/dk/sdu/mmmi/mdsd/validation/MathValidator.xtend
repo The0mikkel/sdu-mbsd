@@ -12,6 +12,7 @@ import org.eclipse.emf.ecore.EObject
 import java.util.LinkedList
 import dk.sdu.mmmi.mdsd.math.ExternalAttribute
 import dk.sdu.mmmi.mdsd.math.Exp
+import org.eclipse.xtext.EcoreUtil2
 
 /**
  * This class contains custom validation rules. 
@@ -41,17 +42,7 @@ class MathValidator extends AbstractMathValidator {
 	
 	@Check
 	def checkAttributeCountExternal(ExternalCall call) {
-		var maths = null as Maths;
-		var object = call as EObject;
-		while (maths === null) {
-			if (object instanceof Maths) {
-				maths = object;
-			}
-			if (object === null) {
-				return;		
-			}
-			object = object.eContainer;
-		}
+		var maths = EcoreUtil2.getContainerOfType(call, Maths);
 		
 		var filteret = maths.externals.filter[it.equals(call.method)];
 		if (filteret.length !== 1) {
