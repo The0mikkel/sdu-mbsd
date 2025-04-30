@@ -24,9 +24,9 @@ import java.util.List
 import java.util.LinkedList
 import dk.sdu.mmmi.mdsd.math.SubMath
 import dk.sdu.mmmi.mdsd.math.ExternalCall
-import java.util.stream.IntStream
 import dk.sdu.mmmi.mdsd.math.External
 import dk.sdu.mmmi.mdsd.math.ExternalAttribute
+import java.util.LinkedHashMap
 
 /**
  * Generates code from your model files on save.
@@ -34,18 +34,12 @@ import dk.sdu.mmmi.mdsd.math.ExternalAttribute
  * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#code-generation
  */
 class MathGenerator extends AbstractGenerator {
-
-	static Map<String, String> variables = new HashMap();
+	static Map<String, String> variables = new LinkedHashMap();
 	static Map<String, List<MathExp>> deferredCalculation = new HashMap();
 	
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
 		val maths = resource.allContents.filter(Maths).next
-		
 		var result = maths.compute
-		
-		// You can replace with hovering, see Bettini Chapter 8
-		// variables.displayPanel
-		
 		result.generateFile(fsa, maths)
 	}
 	
@@ -58,8 +52,10 @@ class MathGenerator extends AbstractGenerator {
 		// Announce variables missing
 		deferredError()
 		deferredCalculation.clear()
+		var resultVariables = new LinkedHashMap(variables)
+		variables.clear()
 		
-		return variables
+		return resultVariables
 	}
 	
 	def static runDeferred(MathExp math) {
@@ -127,19 +123,19 @@ class MathGenerator extends AbstractGenerator {
 	}
 	
 	dispatch def static String computeExp(Plus plus) {
-		return '''«plus.left.computeExp» + «plus.right.computeExp»'''
+		return '''(«plus.left.computeExp» + «plus.right.computeExp»)'''
 	}
 	
 	dispatch def static String computeExp(Minus minus) {
-		return '''«minus.left.computeExp» - «minus.right.computeExp»'''
+		return '''(«minus.left.computeExp» - «minus.right.computeExp»)'''
 	}
 	
 	dispatch def static String computeExp(Multi multi) {
-		return '''«multi.left.computeExp» * «multi.right.computeExp»'''
+		return '''(«multi.left.computeExp» * «multi.right.computeExp»)'''
 	}
 	
 	dispatch def static String computeExp(Div div) {
-		return '''«div.left.computeExp» / «div.right.computeExp»'''
+		return '''(«div.left.computeExp» / «div.right.computeExp»)'''
 	}
 	
 	dispatch def static String computeExp(SubMath sub) {
@@ -172,12 +168,11 @@ class MathGenerator extends AbstractGenerator {
 	}
 	
 	dispatch def static String computeExp(VariableUse variable) {
-		var variableName = variable.ref.getName
-		if (!variables.containsKey(variableName)) {
-			throw new VariableNotFound(variableName)
+		if (!variables.containsKey(variable.ref.name)) {
+			throw new VariableNotFound(variable.ref.name);
 		}
 		
-		return variables.get(variableName)
+		return variables.get(variable.ref.name)
 	}
 	
 	dispatch def static String computeExp(ExternalCall call) {
@@ -233,30 +228,35 @@ class MathGenerator extends AbstractGenerator {
 	}
 	
 	def generateFile(Map<String, String> result, IFileSystemAccess2 fsa, Maths maths) {
-		fsa.generateFile('output.java', '''
+		fsa.generateFile('''math_expression/«maths.program.name».java''', '''
 package math_expression;
 public class «maths.program.name» {
-	«FOR entry : result.entrySet()»
-	public int «entry.getKey()»;
+	«FOR variable : result.entrySet()»
+	public int «variable.key»;
 	«ENDFOR»
 	
+	«IF maths.externals.length > 0»
 	private External external;
 	
 	public «maths.program.name»(External external) {
 	    this.external = external;
 	}
+	«ELSE»
+	public «maths.program.name»() {}
+	«ENDIF»
 	
 	public void compute() {
-		«FOR entry : result.entrySet()»
-		«entry.getKey()» = «entry.getValue()»;
+		«FOR variable : result.entrySet()»
+		«variable.key» = «variable.value»;
 		«ENDFOR»
 	}
-	
-	interface External {
+	«IF maths.externals.length > 0»
+	public interface External {
 		«FOR externalMethod : maths.externals»
 		public int «externalMethod.name»(«getParameterList(externalMethod)»);
 		«ENDFOR»
 	}
+	«ENDIF»
 }
 		''')
 	}
