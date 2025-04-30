@@ -3,6 +3,10 @@
  */
 package dk.sdu.mmmi.mdsd.validation
 
+import org.eclipse.xtext.validation.Check
+import dk.sdu.mmmi.mdsd.math.Maths
+import dk.sdu.mmmi.mdsd.math.MathExp
+import dk.sdu.mmmi.mdsd.math.MathPackage
 
 /**
  * This class contains custom validation rules. 
@@ -11,15 +15,22 @@ package dk.sdu.mmmi.mdsd.validation
  */
 class MathValidator extends AbstractMathValidator {
 	
-//	public static val INVALID_NAME = 'invalidName'
-//
-//	@Check
-//	def checkGreetingStartsWithCapital(Greeting greeting) {
-//		if (!Character.isUpperCase(greeting.name.charAt(0))) {
-//			warning('Name should start with a capital', 
-//					MathPackage.Literals.GREETING__NAME,
-//					INVALID_NAME)
-//		}
-//	}
-	
+	public static val INVALID_NAME = 'invalidName'
+
+	@Check
+	def checkNamesAreUnique(MathExp math) {
+		var name = math.variable.name
+		
+		var container = math.eContainer
+		if (container instanceof Maths) {
+			for (expression : container.expressions) {
+				if (!expression.equals(math)) {
+					var expName = expression.variable.name
+					if (name.equals(expName)) {
+						warning("Variable is already declared", MathPackage.eINSTANCE.mathExp_Variable)
+					}
+				}
+			}
+		}
+	}
 }

@@ -7,9 +7,7 @@ import dk.sdu.mmmi.mdsd.math.Div
 import dk.sdu.mmmi.mdsd.math.Exp
 import dk.sdu.mmmi.mdsd.math.MathExp
 import dk.sdu.mmmi.mdsd.math.Minus
-import dk.sdu.mmmi.mdsd.math.Mult
 import dk.sdu.mmmi.mdsd.math.Plus
-import dk.sdu.mmmi.mdsd.math.Primary
 import java.util.HashMap
 import java.util.Map
 import javax.swing.JOptionPane
@@ -17,6 +15,14 @@ import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
+import org.eclipse.emf.ecore.EObject
+import dk.sdu.mmmi.mdsd.math.VariableUse
+import dk.sdu.mmmi.mdsd.math.Multi
+import dk.sdu.mmmi.mdsd.math.Maths
+import dk.sdu.mmmi.mdsd.math.SubMathExp
+import java.util.List
+import java.util.LinkedList
+import dk.sdu.mmmi.mdsd.math.SubMath
 
 /**
  * Generates code from your model files on save.
@@ -26,40 +32,156 @@ import org.eclipse.xtext.generator.IGeneratorContext
 class MathGenerator extends AbstractGenerator {
 
 	static Map<String, Integer> variables = new HashMap();
+	static Map<String, List<MathExp>> deferredCalculation = new HashMap();
 	
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
-		val math = resource.allContents.filter(MathExp).next
-		val result = math.compute
+		val maths = resource.allContents.filter(Maths).next
+		
+		var result = maths.compute
 		
 		// You can replace with hovering, see Bettini Chapter 8
-		result.displayPanel
+		// variables.displayPanel
+		
+		result.generateFile(fsa)
 	}
 	
-	//
-	// Compute function: computes value of expression
-	// Note: written according to illegal left-recursive grammar, requires fix
-	//
-	
-	def static compute(MathExp math) { 
-		math.exp.computeExp
+	def static compute(Maths math) {
+		variables.clear
+		for (exp : math.expressions) {
+			exp.compute
+		}
+		
+		// Announce variables missing
+		deferredError()
+		deferredCalculation.clear()
+		
 		return variables
 	}
 	
-	def static int computeExp(Exp exp) {
-		val left = exp.left.computePrim
-		switch exp.operator {
-			Plus: left+exp.right.computePrim
-			Minus: left-exp.right.computePrim
-			Mult: left*exp.right.computePrim
-			Div: left/exp.right.computePrim
-			default: left
+	def static runDeferred(MathExp math) {
+		var variableName = math.variable.name
+		var deferredExists = deferredCalculation.containsKey(variableName)
+		if (deferredExists) {
+			var deferredList = deferredCalculation.get(variableName)
+			deferredCalculation.remove(variableName)
+			for (deferedMath : deferredList) {
+				System.out.println("Found " + deferedMath.variable.name + " as deferred from " + variableName)
+				deferedMath.compute
+			}
 		}
 	}
 	
-	def static int computePrim(Primary factor) { 
-		87
+	def static deferredError() {
+		var keys = deferredCalculation.keySet
+		var message = ""
+		
+		if (keys.empty) {
+			return
+		}
+		
+		for (key : keys) {
+			var list = deferredCalculation.get(key)
+			message += "Missing variable " + key + " caused variables " + list.map[it.variable.name].join(", ") + " to not be calculated\n"
+		}
+		
+		JOptionPane.showMessageDialog(null, message, "Missing variables", JOptionPane.ERROR_MESSAGE)
 	}
-
+	
+	def static compute(MathExp math) {
+		var variableName = math.variable.name
+		var result = 0;
+		
+		try {			
+			result = math.exp.computeExp
+			System.out.println(math.variable.name + ": " +result)
+			variables.put(math.variable.name, result);
+			
+			math.runDeferred
+		} catch (VariableNotFound notFound) {			
+			var defered = deferredCalculation.get(notFound.variable);
+			if (defered === null) {
+				defered = new LinkedList();
+				deferredCalculation.put(notFound.variable, defered)
+			}
+			defered.add(math);
+			System.out.println("Deferred calculation of " + variableName + " until " + notFound.variable + " is calculated")
+			
+			return variables;
+		}
+		
+		return variables
+	}
+	
+	dispatch def static int computeExp(Exp exp) {
+		val expression = exp.expression
+		
+		return expression.computeExp
+	}
+	
+	dispatch def static int computeExp(dk.sdu.mmmi.mdsd.math.Number number) {
+		return number.value
+	}
+	
+	dispatch def static int computeExp(Plus plus) {
+		return plus.left.computeExp + plus.right.computeExp
+	}
+	
+	dispatch def static int computeExp(Minus minus) {
+		return minus.left.computeExp - minus.right.computeExp
+	}
+	
+	dispatch def static int computeExp(Multi multi) {
+		return multi.left.computeExp * multi.right.computeExp
+	}
+	
+	dispatch def static int computeExp(Div div) {
+		return div.left.computeExp / div.right.computeExp
+	}
+	
+	dispatch def static int computeExp(SubMath sub) {
+		return sub.sub.computeExp
+	}
+	
+	dispatch def static int computeExp(SubMathExp sub) {
+		var variable = sub.variable.name
+		
+		var existing = 0
+		var exists = false
+		if (variables.containsKey(variable)) {
+			exists = true
+			existing = variables.get(variable);
+		}
+		
+		var value = sub.value.computeExp
+		variables.put(variable, value)
+		
+		var expression = sub.exp.get(0)
+		var result = expression.computeExp
+		variables.remove(variable)
+		
+		
+		if (exists) {
+			variables.put(variable, existing)
+		}
+		
+		return result
+	}
+	
+	dispatch def static int computeExp(VariableUse variable) {
+		var variableName = variable.ref.getName
+		if (!variables.containsKey(variableName)) {
+			throw new VariableNotFound(variableName)
+		}
+		
+		return variables.get(variableName)
+	}
+	
+	dispatch def static int computeExp(EObject object) {
+		System.out.println("Found unknown object")
+		System.out.println(object)
+		return 1;
+	}
+	
 	def void displayPanel(Map<String, Integer> result) {
 		var resultString = ""
 		for (entry : result.entrySet()) {
@@ -67,5 +189,14 @@ class MathGenerator extends AbstractGenerator {
         }
 		
 		JOptionPane.showMessageDialog(null, resultString ,"Math Language", JOptionPane.INFORMATION_MESSAGE)
+	}
+	
+	def void generateFile(Map<String, Integer> result, IFileSystemAccess2 fsa) {
+		var resultString = ""
+		for (entry : result.entrySet()) {
+         	resultString += "var " + entry.getKey() + " = " + entry.getValue() + "\n"
+        }
+		
+		fsa.generateFile('output.txt', resultString)
 	}
 }
